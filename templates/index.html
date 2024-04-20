@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED Control</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+   <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.5/socket.io.min.js"></script>
+   <script type="text/javascript" charset="utf-8">
+        namespace = '/test';
+        var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+
+        function startMonitoring() {
+            socket.emit('start_monitoring');
+            document.getElementById('slider').disabled = true; // Deaktivuje slider
+        };
+
+        function startControl() {
+            document.getElementById('slider').disabled = false;
+            document.getElementById('slider').addEventListener('input', function(){
+                var value = document.getElementById('slider').value;
+                socket.emit('start_control',value);
+                });
+            document.getElementById('slider').addEventListener('change', function() {
+                var value = document.getElementById('slider').value;
+                socket.emit('brightness_control', value); // Posiela hodnoty zo slidera neprestajne
+                    
+                });
+            };
+            
+        
+        
+        
+    </script>
+</head>
+<body>
+    <h1>LED Control</h1>
+    <button onclick="startMonitoring()">Start Monitoring</button>
+    <button onclick="startControl()">Start Control</button>
+    <br><br>
+    <input type="range" min="0" max="255" value="0" class="slider" id="slider" disabled>
+</body>
+</html>
