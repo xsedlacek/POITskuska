@@ -7,14 +7,64 @@
     src="//code.jquery.com/jquery-1.4.2.min.js"></script>
   <script type="text/javascript"
     src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.5/socket.io.min.js"></script>
-  <script src="static/libs/plotly-latest.min.js"></script>
+  <script src="static/libs/gauge.min.js"></script>
   <script type="text/javascript"
     charset="utf-8">
+      //https://canvas-gauges.com/documentation/user-guide/configuration
       $(document).ready(function () {
-        var x = new Array();
-        var y = new Array();
-        var trace;
-        var layout;
+        var gauge = new RadialGauge({
+          renderTo: 'canvasID',
+          width: 300,
+          height: 300,
+          units: "Hodnota Senzora",
+          minValue: 0,
+          maxValue: 1000,
+          majorTicks: [
+            "0",
+            "50",
+            "100",
+            "150",
+            "200",
+            "250",
+            "300",
+            "350",
+            "400",
+            "450",
+            "500",
+            "550",
+            "600",
+            "650",
+            "700",
+            "750",
+            "800",
+            "850",
+            "900",
+            "950",
+            "1000"
+          ],
+          minorTicks: 1,
+          strokeTicks: true,
+          highlights: [
+            {
+              "from": 750,
+              "to": 1000,
+              "color": "rgba(200, 50, 50, .75)"
+            }
+          ],
+          colorPlate: "#fff",
+          borderShadowWidth: 0,
+          borders: false,
+          needleType: "arrow",
+          needleWidth: 2,
+          needleCircleSize: 7,
+          needleCircleOuter: true,
+          needleCircleInner: false,
+          animationDuration: 1500,
+          animationRule: "linear"
+        });
+        gauge.draw();
+        gauge.value = "0";
+
 
         namespace = '/test';
         var socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
@@ -26,27 +76,7 @@
         socket.on('my_response', function (msg) {
           console.log(msg.data);
           $('#log').append('Received #' + msg.count + ': ' + msg.data + '<br>').html();
-          x.push(parseFloat(msg.count));
-          y.push(parseFloat(msg.data));
-          trace = {
-            x: x,
-            y: y,
-          };
-          layout = {
-            title: 'Data',
-            xaxis: {
-              title: 'x',
-            },
-            yaxis: {
-              title: 'y',
-              //range: [-1,1]
-            }
-          };
-          console.log(trace);
-          var traces = new Array();
-          traces.push(trace);
-          Plotly.newPlot($('#plotdiv')[0], traces, layout);
-          //addTraces               
+          gauge.value = msg.data;
         });
 
         $('form#emit').submit(function (event) {
@@ -68,28 +98,13 @@
 
 <body>
   <h1>Flask-SocketIO Test</h1>
-  <h2>Send:</h2>
-  <form id="emit"
-    method="POST"
-    action='#'>
-    <input type="text"
-      name="emit_value"
-      id="emit_value"
-      placeholder="Amplituda">
-    <input type="submit"
-      value="Send">
-  </form>
-  <button id="buttonVal"
-    type="submit"
-    value="send">Send value</button>
   <form id="disconnect"
     method="POST"
     action="#">
     <input type="submit"
       value="Disconnect">
   </form>
-  <div id="plotdiv"
-    style="width:600px;height:250px;"></div>
+  <canvas id="canvasID"></canvas>
   <h2>Receive:</h2>
   <div id="log"></div>
 </body>
