@@ -17,6 +17,7 @@ socketio = SocketIO(app, async_mode=async_mode)
 thread = None
 thread_lock = Lock()
 
+#ziskanie pristupovych udajov do DB
 config = ConfigParser.ConfigParser()
 config.read('config.cfg')
 myhost = config.get('mysqlDB', 'host')
@@ -40,50 +41,52 @@ def background_thread(args):
           dbV = 'stop'  
         if ser.in_waiting > 0:
             line = ser.readline().decode('utf-8').rstrip()
+        #spustenie monitorovania
         if dbV == 'start':
+            #vytvaranie json objektu
           dataDict = {
             "x": count,
             "y": int(line)
             }
           dataList.append(dataDict)
         else:
-            print(str(dataList))
             if len(dataList)>0:
+                #zapis do suboru
                 fuj = str(dataList).replace("'", "\"")
-                dataJsonString = json.dumps(dataList, ensure_ascii=False)
-                print(dataJsonString)
                 fo = open("static/files/test.txt","a+")    
-                fo.write("%s\r\n" %dataJsonString)
+                fo.write("%s\r\n" %fuj)
+                #zapis do DB
                 cursor = db.cursor()
                 cursor.execute("SELECT MAX(id) FROM zadanie")
                 maxid = cursor.fetchone()
                 cursor.execute("INSERT INTO zadanie (id,hodnoty) VALUES (%s,%s)", (maxid[0]+1,fuj))
                 db.commit()
+                
                 dataList = []
                 count = 0
-            print(str(dataList))
         time.sleep(2)    
         socketio.emit('my_response',
                       {'data': line, 'count': count},
                       namespace='/test')  
         count+=1
     db.close()
+    
 @app.route('/', methods=['GET', 'POST'])
 def hello():
     return render_template('tabs.html')
-
+#nacitanie zo suboru
 @app.route('/read/<string:num>', methods=['GET', 'POST'])
 def readmyfile(num):
     fo = open("static/files/test.txt","r")
     rows = fo.readlines()
     return rows[int(num)-1]
-
+#nacitanie z DB
 @app.route('/dbdata/<string:num>', methods=['GET', 'POST'])
 def dbdata(num):
   db = MySQLdb.connect(host=myhost,user=myuser,passwd=mypasswd,db=mydb)
   cursor = db.cursor()
   print(num)
-  cursor.execute("SELECT hodnoty FROM  zadanie WHERE id=%s", num)
+  cursor.execute("SELECT hodnoty FROM  zadanie WHERE id=%s", (num,))
   rv = cursor.fetchone()
   return str(rv[0])
 
@@ -92,18 +95,19 @@ def disconnect_request():
     emit('my_response',
          {'data': 'Disconnected!', 'count': session['receive_count']})
     disconnect()
-
+#pripojenie na websocket a vytvorenie background thread
 @socketio.on('connect', namespace='/test')
 def connect():
     global thread
     with thread_lock:
         if thread is None:
             thread = socketio.start_background_task(target=background_thread,args=session._get_current_object())
-
+#spustenie monitorovania
 @socketio.on('db_event', namespace='/test')
 def db_message(message):
     session['db_value'] = message['value']
 
+#odpojenie od websocketu
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
     print('Client disconnected', request.sid)

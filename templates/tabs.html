@@ -9,6 +9,115 @@
   <script src="static/libs/plotly-latest.min.js"></script>
   <script src="static/libs/gauge.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <style>
+        body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+
+#tabs {
+  width: 90%;
+  margin: 20px auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+#tabs ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  border-bottom: 2px solid #ccc;
+}
+
+#tabs ul li {
+  display: inline-block;
+}
+
+#tabs ul li a {
+  text-decoration: none;
+  color: #555;
+  padding: 10px 20px;
+  border-radius: 8px 8px 0 0;
+  background-color: #f4f4f4;
+  transition: background-color 0.3s ease;
+}
+
+#tabs ul li a:hover {
+  background-color: #e0e0e0;
+}
+
+#tabs > div {
+  padding: 20px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+  padding: 12px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+th {
+  background-color: #f4f4f4;
+}
+
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #0069d9;
+}
+
+#buttonVal {
+  background-color: #ffc107;
+  color: #fff;
+}
+
+#buttonVal:hover {
+  background-color: #e0a800;
+}
+    </style>
   <script>
     $(function() {
       $("#tabs").tabs({
@@ -59,12 +168,7 @@
         socket.on('my_response', function(msg) {
           if (isLoggingEnabled) {
             console.log(msg.data);
-            $('#log').append('Received #' + msg.count + ': ' + msg.data + '<br>').html();
-            $('#log').scrollTop = $('#log').scrollHeight;
-            $('#log2').append('Received #' + msg.count + ': ' + msg.data + '<br>').html();
-            $('#log2').scrollTop = $('#log2').scrollHeight;
-            $('#log3').append('Received #' + msg.count + ': ' + msg.data + '<br>').html();
-            $('#log3').scrollTop = $('#log3').scrollHeight;
+            addMessageToTable(msg);
 
             gauge.value = msg.data;
 
@@ -112,7 +216,7 @@
             const id = document.getElementById('id').value;
             console.log(id);
             url = "http://127.0.0.1:5000/read/"+id;
-            fetchDataAndRenderChart(url,'#plotDivFile');
+            fetchDataAndRenderChart(url,'#plotDivFile','#logTable5');
         });
         
         document.getElementById('database').addEventListener('submit', function(event) {
@@ -120,24 +224,36 @@
             const id = document.getElementById('valueDB').value;
             console.log(id);
             url = "http://127.0.0.1:5000/dbdata/"+id;
-            fetchDataAndRenderChart(url,'#plotDivDB');
+            fetchDataAndRenderChart(url,'#plotDivDB','#logTable4');
         });
         
       });
     });
             
-        
+        function addMessageToTable(msg) {
+            var newRow = '<tr><td>' + msg.count + '</td><td>' + msg.data + '</td></tr>';
+            $('#logTable tbody').append(newRow);
+        }
 
-        async function fetchDataAndRenderChart(url,div) {
+        async function fetchDataAndRenderChart(url,div,table) {
             try {
                 const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 const jsonData = await response.json();
+                
+                while ($(table + ' tbody').firstChild) {
+                  $(table + ' tbody').removeChild(tbody.firstChild);
+                }
+                jsonData.forEach(obj => {
+                    var newRow = '<tr><td>' + obj.x + '</td><td>' + obj.y + '</td></tr>';
+                    $(table + ' tbody').append(newRow);
+                });
                 const xData = jsonData.map(point => point.x);
                 const yData = jsonData.map(point => Number(point.y));
                 renderChart(xData, yData,div);
+                
             } catch (error) {
                 console.error('Error fetching or parsing data:', error);
             }
@@ -188,41 +304,95 @@
 			  <input type="submit"  value="Poslať">
 			</form>
       <button type="button" class="btn btn-success" id="connectButton">OPEN</button>
-			<button id="buttonVal" type="submit" value="start">Start</button>
-      <form id="disconnect" method="POST" action="#">
-			  <button type="submit" class="btn btn-danger">CLOSE</button>
-			</form> 
+<button id="buttonVal" type="submit" class="btn" value="start">Start</button>
+<form id="disconnect" method="POST" action="#">
+  <button type="submit" class="btn btn-danger">CLOSE</button>
+</form>
+      
 			
 			<h2>Prijaté dáta:</h2>
-			<div id="log" style="height:200px; overflow-y:auto;"></div>
+			<div id="log" style="height:200px; overflow-y:auto;">
+      <table id="logTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table></div>
     </div>
     
     <div id="tabs-2">
       <div id="plotdiv" style="width:600px;height:250px;"></div>
       <h2>Hodnoty zo Senzora:</h2>
-      <div id="log2" style="height:200px; overflow-y:auto;"></div>
+      <div id="log2" style="height:200px; overflow-y:auto;">
+      <table id="logTable">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Data</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table></div>
     </div>
     <div id="tabs-3">
       <canvas id="canvasID"></canvas>
       <h2>Hodnoty zo Senzora:</h2>
-      <div id="log3" style="height:200px; overflow-y:auto;"></div>
+      <div id="log3" style="height:200px; overflow-y:auto;">      
+        <table id="logTable">
+          <thead>
+              <tr>
+                <th>#</th>
+                <th>Data</th>
+              </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+    </div>
     </div>
     <div id="tabs-4">
       <h1>Graf - databáza</h1>
       <form id="database" method="POST" action="#">
-        <input type="text" name="value" id="valueDB" placeholder="Záznam v databáze">
+        <input type="text" name="value" id="valueDB" placeholder="ID záznamu"required>
         <input type="submit" value="OK">
       </form> 
       <div id="plotDivDB" style="width:600px;height:250px;"></div>
+        <table id="logTable4">
+          <thead>
+              <tr>
+                <th>#</th>
+                <th>Data</th>
+              </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      
     </div>
     <div id="tabs-5">
       <h1>Graf - .txt súbor</h1>
       <form id="fileForm">
-        <label for="id">Zadaj ID zaznamu:</label>
-        <input type="text" id="id" name="id" required>
-        <button type="submit">Odoslať</button>
+        
+        <input type="text" id="id" name="id" placeholder="ID záznamu" required>
+        <input type="submit" value="OK">
       </form>
       <div id="plotDivFile" style="width:600px;height:250px;"></div>
+        <table id="logTable5">
+          <thead>
+              <tr>
+                <th>#</th>
+                <th>Data</th>
+              </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      
     </div>
   </div>
 </body>
